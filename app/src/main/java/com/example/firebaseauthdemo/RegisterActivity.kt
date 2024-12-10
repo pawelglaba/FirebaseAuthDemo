@@ -11,7 +11,6 @@ import com.example.firebaseauthdemo.firebase.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 
-
 /**
  * Handles user registration with input validation and Firebase Authentication integration.
  */
@@ -110,9 +109,15 @@ class RegisterActivity : BaseActivity() {
                         val user = User(
                             id = firebaseUser.uid,
                             name = name,
-                            registeredUser = true,
-                            email = email
+                            email = email,
+                            phoneNumber = "", // Default empty
+                            dateOfBirth = "", // Default empty
+                            address = mapOf(), // Default empty map
+                            interests = listOf(), // Default empty list
+                            profilePictureUrl = "" // Default empty
                         )
+
+                        // Save user data to Firestore
                         FirestoreClass().registerUserFS(this@RegisterActivity, user)
 
                         FirebaseAuth.getInstance().signOut()

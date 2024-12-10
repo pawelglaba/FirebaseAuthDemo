@@ -5,22 +5,22 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".UpdateDataActivity">
 
-    <!-- Welcome Text -->
+    <!-- Title -->
     <TextView
-        android:id="@+id/welcomeText"
+        android:id="@+id/titleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Welcome, User!"
-        android:textSize="18sp"
+        android:text="Update Your Details"
+        android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Profile Picture Preview -->
+    <!-- Profile Picture -->
     <ImageView
         android:id="@+id/profileImageView"
         android:layout_width="100dp"
@@ -28,92 +28,68 @@
         android:layout_marginTop="16dp"
         android:contentDescription="Profile Picture"
         android:scaleType="centerCrop"
-        android:src="@drawable/ball"
-        app:layout_constraintTop_toBottomOf="@id/welcomeText"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
         app:layout_constraintStart_toStartOf="parent"
-     app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/ball" />
 
-    <!-- Button to Select Profile Picture -->
-    <Button
-        android:id="@+id/selectImageButton"
+    <!-- Name -->
+    <EditText
+        android:id="@+id/nameInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Select Profile Picture"
+        android:hint="Name"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/profileImageView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_percent="0.8" />
 
-    <!-- Date of Birth Selector -->
-    <Button
-        android:id="@+id/dobButton"
+    <!-- Email -->
+    <EditText
+        android:id="@+id/emailInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Select Date of Birth"
+        android:hint="Email"
+        android:inputType="textEmailAddress"
         android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/selectImageButton"
+        android:enabled="false"
+        app:layout_constraintTop_toBottomOf="@id/nameInput"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_percent="0.8" />
 
-    <!-- Date of Birth Display -->
-    <TextView
-        android:id="@+id/dobText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Selected Date: "
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/dobButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_percent="0.8" />
-
-    <!-- Automatically Calculated Age -->
-    <TextView
-        android:id="@+id/ageText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Your Age: "
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/dobText"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_percent="0.8" />
-
-    <!-- Phone Number Input -->
+    <!-- Phone Number -->
     <EditText
         android:id="@+id/phoneInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Enter your phone number"
+        android:hint="Phone Number"
         android:inputType="phone"
         android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/ageText"
+        app:layout_constraintTop_toBottomOf="@id/emailInput"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_percent="0.8" />
 
-    <!-- Address Input -->
+    <!-- Address -->
     <EditText
         android:id="@+id/addressInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Enter your address (City, Street, Postcode)"
-        android:inputType="textPostalAddress"
+        android:hint="Address (City, Street, Postcode)"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/phoneInput"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_percent="0.8" />
 
-    <!-- Interests Input -->
+    <!-- Interests -->
     <EditText
         android:id="@+id/interestsInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Enter your interests (comma separated)"
-        android:inputType="text"
+        android:hint="Interests (comma-separated)"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/addressInput"
         app:layout_constraintStart_toStartOf="parent"
@@ -125,20 +101,20 @@
         android:id="@+id/submitButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Submit"
+        android:text="Update Data"
         android:layout_marginTop="24dp"
         app:layout_constraintTop_toBottomOf="@id/interestsInput"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_percent="0.6" />
 
-    <!-- Update Data Button -->
+    <!-- Cancel Button -->
     <Button
-        android:id="@+id/updateDataButton"
+        android:id="@+id/cancelButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Update Data"
-        android:layout_marginTop="16dp"
+        android:text="Cancel"
+        android:layout_marginTop="8dp"
         app:layout_constraintTop_toBottomOf="@id/submitButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
