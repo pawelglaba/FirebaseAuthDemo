@@ -6,10 +6,12 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import com.example.firebaseauthdemo.firebase.FirestoreClass
 import com.example.firebaseauthdemo.firebase.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.launch
 
 /**
  * Handles user registration with input validation and Firebase Authentication integration.
@@ -117,8 +119,15 @@ class RegisterActivity : BaseActivity() {
                             profilePictureUrl = "" // Default empty
                         )
 
-                        // Save user data to Firestore
-                        FirestoreClass().registerUserFS(this@RegisterActivity, user)
+                        lifecycleScope.launch {
+                            try {
+                                val firestoreClass = FirestoreClass()
+                                firestoreClass.registerOrUpdateUser(user)
+                                Toast.makeText(this@RegisterActivity, "Data saved successfully!", Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                Toast.makeText(this@RegisterActivity, "Failed to save data: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
 
                         FirebaseAuth.getInstance().signOut()
                         finish()

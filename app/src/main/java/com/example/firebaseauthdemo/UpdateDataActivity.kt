@@ -4,10 +4,16 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.firebaseauthdemo.firebase.FirestoreClass
+import com.example.firebaseauthdemo.firebase.User
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
+/**
+ * Activity to update user data.
+ */
 class UpdateDataActivity : AppCompatActivity() {
 
     private lateinit var nameInput: EditText
@@ -20,57 +26,43 @@ class UpdateDataActivity : AppCompatActivity() {
     private lateinit var profileImageView: ImageView
 
     private val auth = FirebaseAuth.getInstance()
+    private val firestoreClass = FirestoreClass()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_update_data)
 
         // Initialize UI components
-        nameInput = findViewById(R.id.nameInput)
-        emailInput = findViewById(R.id.emailInput)
-        phoneInput = findViewById(R.id.phoneInput)
-        addressInput = findViewById(R.id.addressInput)
-        interestsInput = findViewById(R.id.interestsInput)
-        submitButton = findViewById(R.id.submitButton)
-        cancelButton = findViewById(R.id.cancelButton)
-        profileImageView = findViewById(R.id.profileImageView)
+        initializeUI()
 
         val userId = auth.currentUser?.uid
 
         if (userId != null) {
             // Load user data using FirestoreClass
-            FirestoreClass().loadUserData(this, userId) { data ->
-
-                // Fetch profile picture URL
-                val profilePictureUrl = data["profilePictureUrl"] as? String
-
-                // Check and load the profile picture
-                loadProfilePicture(profilePictureUrl)
-
-                // Populate all fields with user data
-                nameInput.setText(data["name"] as? String ?: "")
-                emailInput.setText(data["email"] as? String ?: "")
-                phoneInput.setText(data["phoneNumber"] as? String ?: "")
-
-                // Map address correctly
-                val addressMap = data["address"] as? Map<String, String>
-                if (addressMap != null) {
-                    val city = addressMap["city"] ?: ""
-                    val street = addressMap["street"] ?: ""
-                    val postcode = addressMap["postcode"] ?: ""
-                    addressInput.setText("$city, $street, $postcode")
-                } else {
-                    addressInput.setText("")
+            lifecycleScope.launch {
+                try {
+                    val data = firestoreClass.loadUserData(userId) // Suspend function
+                    if (data != null) {
+                        val user = User.fromMap(data)
+                        populateUI(user)
+                    } else {
+                        Toast.makeText(this@UpdateDataActivity, "No user data found.", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@UpdateDataActivity, "Error loading user data: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-
-                // Set interests
-                interestsInput.setText((data["interests"] as? List<*>)?.joinToString(", ") ?: "")
             }
         }
 
         // Handle submit button click
         submitButton.setOnClickListener {
-            updateUserData(userId)
+            if (userId != null) {
+                lifecycleScope.launch {
+                    updateUserData(userId)
+                }
+            } else {
+                Toast.makeText(this, "User not logged in.", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Handle cancel button click
@@ -79,25 +71,51 @@ class UpdateDataActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadProfilePicture(profilePictureUrl: String?) {
-        if (!profilePictureUrl.isNullOrEmpty()) {
-            // Load image from the provided URL
+    /**
+     * Initialize UI components.
+     */
+    private fun initializeUI() {
+        nameInput = findViewById(R.id.nameInput)
+        emailInput = findViewById(R.id.emailInput)
+        phoneInput = findViewById(R.id.phoneInput)
+        addressInput = findViewById(R.id.addressInput)
+        interestsInput = findViewById(R.id.interestsInput)
+        submitButton = findViewById(R.id.submitButton)
+        cancelButton = findViewById(R.id.cancelButton)
+        profileImageView = findViewById(R.id.profileImageView)
+    }
+
+    /**
+     * Populate the UI with user data.
+     *
+     * @param user The User object containing the data to display.
+     */
+    private fun populateUI(user: User) {
+        nameInput.setText(user.name ?: "")
+        emailInput.setText(user.email)
+        phoneInput.setText(user.phoneNumber)
+
+        val address = user.address.values.joinToString(", ")
+        addressInput.setText(address)
+
+        interestsInput.setText(user.interests.joinToString(", "))
+
+        if (user.profilePictureUrl.isNotEmpty()) {
             Glide.with(this)
-                .load(Uri.parse(profilePictureUrl))
+                .load(Uri.parse(user.profilePictureUrl))
                 .placeholder(R.drawable.ball) // Optional: Show placeholder while loading
                 .into(profileImageView)
         } else {
-            // Set default image if no URL is provided
-            profileImageView.setImageResource(R.drawable.ball)
+            profileImageView.setImageResource(R.drawable.ball) // Default image
         }
     }
 
-    private fun updateUserData(userId: String?) {
-        if (userId == null) {
-            Toast.makeText(this, "User not logged in.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+    /**
+     * Collect updated data from UI and update it in Firestore.
+     *
+     * @param userId The ID of the user being updated.
+     */
+    private suspend fun updateUserData(userId: String) {
         val addressParts = addressInput.text.toString().split(",").map { it.trim() }
         val addressMap = if (addressParts.size == 3) {
             mapOf(
@@ -109,7 +127,6 @@ class UpdateDataActivity : AppCompatActivity() {
             mapOf()
         }
 
-        // Collect updated data
         val updatedData = mapOf(
             "name" to nameInput.text.toString(),
             "email" to emailInput.text.toString(),
@@ -118,9 +135,13 @@ class UpdateDataActivity : AppCompatActivity() {
             "interests" to interestsInput.text.toString().split(",").map { it.trim() }
         )
 
-        // Update Firestore data using FirestoreClass
-        FirestoreClass().updateUserData(this, userId, updatedData)
-        setResult(RESULT_OK) // Notify MainActivity that data has been updated
-        finish() // Close the activity
+        try {
+            firestoreClass.updateUserData(userId, updatedData) // Suspend function
+            Toast.makeText(this, "Data updated successfully!", Toast.LENGTH_SHORT).show()
+            setResult(RESULT_OK) // Notify MainActivity that data has been updated
+            finish() // Close the activity
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to update data: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 }
