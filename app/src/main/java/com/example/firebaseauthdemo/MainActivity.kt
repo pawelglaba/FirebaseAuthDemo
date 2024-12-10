@@ -35,18 +35,10 @@ class MainActivity : AppCompatActivity() {
     private var selectedDateOfBirth: String = ""
     private var selectedImageUri: Uri? = null
 
-    private val auth = FirebaseAuth.getInstance()
-    private val firestoreClass = FirestoreClass()
+    private val auth = FirebaseAuth.getInstance() // Firebase authentication instance
+    private val firestoreClass = FirestoreClass() // Firestore interaction helper class
 
-    private val updateDataLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                val userId = auth.currentUser?.uid
-                if (userId != null) {
-                    loadUserData(userId)
-                }
-            }
-        }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,29 +47,41 @@ class MainActivity : AppCompatActivity() {
         // Initialize UI components
         initializeUI()
 
-        // Load existing user data
+        // Load existing user data if the user is logged in
         val userId = auth.currentUser?.uid
         if (userId != null) {
             loadUserData(userId)
         }
 
-        // Handle profile picture selection
+        // Open gallery to select a profile picture
         selectImageButton.setOnClickListener { openGallery() }
 
-        // Handle DatePicker for date of birth
+        // Open DatePicker to select date of birth
         dobButton.setOnClickListener { openDatePicker() }
 
-        // Handle save button click
+        // Save user data to Firestore
         submitButton.setOnClickListener {
             lifecycleScope.launch {
-            saveUserData() }}
+                saveUserData()
+            }
+        }
 
-        // Handle update button click
+        // Navigate to the UpdateDataActivity
         updateButton.setOnClickListener {
             val intent = Intent(this, UpdateDataActivity::class.java)
             updateDataLauncher.launch(intent)
         }
     }
+
+    private val updateDataLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val userId = auth.currentUser?.uid
+                if (userId != null) {
+                    loadUserData(userId) // Reload user data after update
+                }
+            }
+        }
 
     /**
      * Initialize UI components by finding their views.
@@ -95,13 +99,19 @@ class MainActivity : AppCompatActivity() {
         ageText = findViewById(R.id.ageText)
     }
 
+    /**
+     * Load user data from Firestore and populate the UI.
+     *
+     * @param userId The unique ID of the user whose data is being loaded.
+     */
     private fun loadUserData(userId: String) {
         lifecycleScope.launch {
             try {
-                val data = firestoreClass.loadUserData(userId) // Suspend function
+                // Fetch user data from Firestore
+                val data = firestoreClass.loadUserData(userId)
                 if (data != null) {
-                    val user = User.fromMap(data)
-                    populateUI(user)
+                    val user = User.fromMap(data) // Convert Firestore data into a User object
+                    populateUI(user) // Populate the UI with user data
                 } else {
                     Toast.makeText(this@MainActivity, "No user data found.", Toast.LENGTH_SHORT).show()
                 }
@@ -111,9 +121,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Save user data to Firestore.
+     */
     private suspend fun saveUserData() {
         val userId = auth.currentUser?.uid ?: return
 
+        // Parse address input into a structured map
         val addressParts = addressInput.text.toString().split(",").map { it.trim() }
         val addressMap = if (addressParts.size == 3) {
             mapOf(
@@ -125,20 +139,19 @@ class MainActivity : AppCompatActivity() {
             mapOf()
         }
 
+        // Split interests into a list
         val interests = interestsInput.text.toString().split(",").map { it.trim() }
 
-
-
-
-        val data = firestoreClass.loadUserData(userId) // Suspend function
+        // Fetch existing user data to fill in missing fields
+        val data = firestoreClass.loadUserData(userId)
         if (data != null) {
             userName = User.fromMap(data).name.toString()
         }
-        if (selectedDateOfBirth=="" && User.fromMap(data!!).dateOfBirth!=""){
+        if (selectedDateOfBirth == "" && data != null) {
             selectedDateOfBirth = User.fromMap(data).dateOfBirth
         }
 
-
+        // Create a new User object with updated data
         val user = User(
             email = FirebaseAuth.getInstance().currentUser?.email.toString(),
             name = userName,
@@ -147,16 +160,15 @@ class MainActivity : AppCompatActivity() {
             dateOfBirth = selectedDateOfBirth,
             address = addressMap,
             interests = interests,
-            profilePictureUrl = selectedImageUri?.toString() ?: User.fromMap(data!!).profilePictureUrl.toString()
+            profilePictureUrl = selectedImageUri?.toString() ?: User.fromMap(data!!).profilePictureUrl
         )
 
-        lifecycleScope.launch {
-            try {
-                firestoreClass.registerOrUpdateUser(user) // Suspend function
-                Toast.makeText(this@MainActivity, "Data saved successfully!", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Failed to save data: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+        // Save user data to Firestore
+        try {
+            firestoreClass.registerOrUpdateUser(user)
+            Toast.makeText(this@MainActivity, "Data saved successfully!", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this@MainActivity, "Failed to save data: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -165,34 +177,44 @@ class MainActivity : AppCompatActivity() {
      *
      * @param user The User object containing the data to display.
      */
+    /**
+     * Populate the UI with user data.
+     *
+     * @param user The User object containing the data to display.
+     */
     private fun populateUI(user: User) {
         try {
-            // Log user data for debugging
-            println("Populating UI with user: $user")
             phoneInput.setText(user.phoneNumber)
 
+            // Convert address map to a single string
             val address = user.address.values.joinToString(", ")
             addressInput.setText(address)
 
             interestsInput.setText(user.interests.joinToString(", "))
 
+            // Set date of birth in dobText and calculate/display age
+            if (user.dateOfBirth.isNotEmpty()) {
+                dobText.text = user.dateOfBirth
+                val age = calculateAge(user.dateOfBirth)
+                ageText.text = "Age: $age"
+            } else {
+                dobText.text = "Select your date of birth"
+                ageText.text = ""
+            }
+
+            // Load the profile picture into the ImageView using Glide
             if (user.profilePictureUrl.isNotEmpty()) {
                 Glide.with(this)
                     .load(Uri.parse(user.profilePictureUrl))
-                    .placeholder(R.drawable.ball)
+                    .placeholder(R.drawable.ball) // Placeholder image
                     .into(profileImageView)
             } else {
-                profileImageView.setImageResource(R.drawable.ball)
+                profileImageView.setImageResource(R.drawable.ball) // Default image
             }
         } catch (e: Exception) {
-            // Log error and show a message to the user
-            println("Error populating UI: ${e.message}")
             Toast.makeText(this, "Error displaying user data.", Toast.LENGTH_SHORT).show()
         }
     }
-
-
-
 
     /**
      * Open the gallery for profile picture selection.
@@ -224,6 +246,7 @@ class MainActivity : AppCompatActivity() {
                 selectedDateOfBirth = "$selectedYear-${selectedMonth + 1}-$selectedDay"
                 dobText.text = selectedDateOfBirth
 
+                // Calculate and display age
                 val age = calculateAge(selectedDateOfBirth)
                 ageText.text = "Age: $age"
             },
@@ -232,7 +255,7 @@ class MainActivity : AppCompatActivity() {
             day
         )
 
-        // Set maximum date to today to prevent future dates
+        // Restrict selection to past dates only
         datePickerDialog.datePicker.maxDate = calendar.timeInMillis
 
         datePickerDialog.show()
@@ -255,6 +278,7 @@ class MainActivity : AppCompatActivity() {
         val today = Calendar.getInstance()
         var age = today.get(Calendar.YEAR) - birthYear
 
+        // Adjust age if the current date is before the birthday
         if (today.get(Calendar.MONTH) < birthMonth - 1 ||
             (today.get(Calendar.MONTH) == birthMonth - 1 && today.get(Calendar.DAY_OF_MONTH) < birthDay)
         ) {
